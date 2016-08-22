@@ -40,9 +40,20 @@ canvas {
 <script src="//code.jquery.com/jquery-2.1.0.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/1.3.0/handlebars.js"></script>
 <script src="/socket.io/socket.io.js"></script>
-<script src="main.js"></script>
+<script src="/main.js"></script>
 
 <div id="main">
     <h1>Pictionary</h1>
+    <div id="top-message">
+        <div id="guess" style="display: none">
+            Make a guess: <input type="text">
+        </div>
+        <div id="artist">
+            <p>Your are the Artist! Draw this: <span id="artist-word"></span></p>
+        </div>
+        <div>
+            <p> Last Guess: <span id="lastGuess">No Guess</span></p>
+        </div>
+    </div>
     <canvas id="canvas"></canvas>
 </div>
