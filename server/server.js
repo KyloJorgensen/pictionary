@@ -8,17 +8,28 @@ var http = require('http'),
 
 var WORDS = ["word", "letter", "number", "person", "pen", "class", "people", "sound", "water", "side", "place", "man", "men", "woman", "women", "boy", "girl", "year", "day", "week", "month", "name", "sentence", "line", "air", "land", "home", "hand", "house", "picture", "animal", "mother", "father", "brother", "sister", "world", "head", "page", "country", "question", "answer", "school", "plant", "food", "sun", "state", "eye", "city", "tree", "farm", "story", "sea", "night", "day", "life", "north", "south", "east", "west", "child", "children", "example", "paper", "music", "river", "car", "foot", "feet", "book", "science", "room", "friend", "idea", "fish", "mountain", "horse", "watch", "color", "face", "wood", "list", "bird", "body", "dog", "family", "song", "door", "product", "wind", "ship", "area", "rock", "order", "fire", "problem", "piece", "top", "bottom", "king", "space"];
 
-
 app.use(express.static('public'));
 
 var server = http.Server(app);
 var io = socket_io(server);
+
+var clients = {};
 var artist = true;
 var randomWord = 'default';
+
 io.on('connection', function (socket) {
 
     console.log('Client connected');
 
+    clients[socket.id] = socket;
+
+    console.log(Object.keys(clients));
+
+    socket.on('go', function() {
+        console.log('id: ', socket.id);
+    });
+
+    socket.emit('show');
 
     socket.emit('artist', function() {
     	var data = {};
@@ -28,7 +39,6 @@ io.on('connection', function (socket) {
     		data.word = randomWord;
     	} 
     	artist = false;
-    	console.log(data);
     	return data;
     }());
 
@@ -45,7 +55,6 @@ io.on('connection', function (socket) {
 	    		data.word = randomWord;
 	    	} 
 	    	artist = false;
-	    	console.log(data);
 	    	return data;
 	    }());
     });
@@ -53,6 +62,7 @@ io.on('connection', function (socket) {
     socket.on('disconnect', function() {
         console.log('A user has disconnected');
         socket.broadcast.emit('connections', '');
+        delete clients[socket.id];
     });
 
     socket.on('connections', function(drawer) {

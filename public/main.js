@@ -16,6 +16,11 @@ var pictionary = function(socket) {
         }
     });
 
+    socket.on('show', function() {
+        console.log('showing text');
+        socket.emit('go');
+    });
+
     socket.on('connections', function() {
         socket.emit('connections', drawer);
     });
