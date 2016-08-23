@@ -3,6 +3,7 @@
 var http = require('http'),
 	path = require('path'),
 	express = require('express'),
+    $ = require('jquery'),
 	socket_io = require('socket.io'),
 	app = express();
 
@@ -14,10 +15,11 @@ var server = http.Server(app);
 var io = socket_io(server);
 
 var clients = {};
-var designatedDrawer = {user: ''};
-
-var artist = true;
+var designatedDrawer = '';
 var randomWord = 'default';
+var picture = [];
+var lastguess = 'no guess';
+
 
 io.on('connection', function (socket) {
 
@@ -25,73 +27,96 @@ io.on('connection', function (socket) {
 
     clients[socket.id] = socket;
 
-    if (designatedDrawer.user) {
-    	console.log('here');
-    } else {
-    	console.log('there');
-    	designatedDrawer.user = socket;
+    function newRandomArtist() {
+        var keys = Object.keys(clients);
+        keys = shuffle(keys);
+        for (var i = 0; i < keys.length; i++) {
+            artist(clients[keys[i]]);
+        }
+        picture = [];
     }
 
-    console.log(Object.keys(clients));
-
-    socket.on('go', function() {
-        console.log('id: ', socket.id);
-    });
-
-    socket.emit('show');
-
     function artist(socket) {
+        if (!designatedDrawer) {
+            designatedDrawer = socket.id;
+        }
+
 	    socket.emit('artist', function() {
 	    	var data = {};
 	    	data.artist = function() {
-	    		if (designatedDrawer.user == socket) {
+	    		if (designatedDrawer == socket.id) {
 	    			return true;
 	    		}
 	    		return false;
 	    	}();
 	    	if (data.artist) {
-	    		generateRandomWord();
+	    		randomWord = WORDS[Math.floor(Math.random() * WORDS.length)];
 	    		data.word = randomWord;
 	    	}
 	    	return data;
 	    }());
 	};
 
-	artist(socket);
+    function shuffle(array) {
+        var currentIndex = array.length, temporaryValue, randomIndex;
 
-    function generateRandomWord() {
-    	randomWord = WORDS[Math.floor(Math.random() * WORDS.length)];
+        // While there remain elements to shuffle...
+        while (0 !== currentIndex) {
+
+            // Pick a remaining element...
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex -= 1;
+
+            // And swap it with the current element.
+            temporaryValue = array[currentIndex];
+            array[currentIndex] = array[randomIndex];
+            array[randomIndex] = temporaryValue;
+        }
+
+        return array;
     }
 
-    socket.on('newgame', function() {
-		designatedDrawer.user = '';
-	    artist(socket);
-	    console.log('this1', socket.id);
-    });
+    function drawWholePic() {
+        io.sockets.emit('clearCanvas');
+        for (var i = 0; i < picture.length; i++) {
+            io.sockets.emit('draw', picture[i]);
+        }
+    }
 
     socket.on('disconnect', function() {
         console.log('A user has disconnected');
         delete clients[socket.id];
-        if (designatedDrawer.user = socket) {
-        	console.log('user: ', socket.id);
-        	socket.broadcast.emit('newgame', 'Artist left');
+
+        console.log(designatedDrawer, socket.id);
+        if (designatedDrawer == socket.id) {
+        	console.log('artist disconnected');
+            designatedDrawer = '';
+            newRandomArtist();
         }
     });
 
     socket.on('draw', function(position) {
-    	if (designatedDrawer.user == socket) {
+    	if (designatedDrawer == socket.id) {
     		socket.broadcast.emit('draw', position);
+            picture.push(position);
     	}
     });
 
     socket.on('guess', function(guess) {
+        lastguess = guess;
     	socket.broadcast.emit('guess', guess);
     	if (guess == randomWord){
-    		socket.broadcast.emit('newgame', 'Word Was Guessed Correctly');
-    		generateRandomWord();
+            designatedDrawer = socket.id;
     		socket.emit('artist', {artist: true, word: randomWord});
+            newRandomArtist();
     	}
-    });
+    }); 
+
+
+    socket.emit('guess', lastguess);
+    artist(socket);
+    drawWholePic();
+
 });
 
 app.get('/', function(req, res) {

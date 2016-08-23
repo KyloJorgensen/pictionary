@@ -2,7 +2,8 @@ var pictionary = function(socket) {
     var drawer = false;
 
     socket.on('artist', function(data) {
-        if (data.artist) {
+        drawer = data.artist;
+        if (drawer) {
             $('#guess').hide();
             $('#artist').show();
             $('#artist-word').html(data.word);
@@ -10,16 +11,6 @@ var pictionary = function(socket) {
             $('#guess').show();
             $('#artist').hide();
         }
-    });
-
-    socket.on('show', function() {
-        console.log('showing text');
-        socket.emit('go');
-    });
-
-    socket.on('newgame' , function(message) {
-        console.log(message);
-        socket.emit('newgame');
     });
 
     var canvas, context;
@@ -50,6 +41,10 @@ var pictionary = function(socket) {
         drawing = false;
     });
 
+    socket.on('clearCanvas', function() {
+        context.clearRect(0, 0, canvas[0].width, canvas[0].height);
+    });
+
     socket.on('draw', draw);
 
     var guessBox;
@@ -73,6 +68,7 @@ var pictionary = function(socket) {
 
     socket.on('guess', addGuess);
 
+    socket.emit('artist');
 };
 
 $(document).ready(function() {
