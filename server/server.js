@@ -27,35 +27,65 @@ io.on('connection', function (socket) {
 
     clients[socket.id] = socket;
 
-    function newRandomArtist() {
-        var keys = Object.keys(clients);
-        keys = shuffle(keys);
-        for (var i = 0; i < keys.length; i++) {
-            artist(clients[keys[i]]);
-        }
-        picture = [];
-    }
-
-    function artist(socket) {
+    function gameRoleRequest(socket) {
         if (!designatedDrawer) {
             designatedDrawer = socket.id;
         }
 
 	    socket.emit('artist', function() {
 	    	var data = {};
-	    	data.artist = function() {
-	    		if (designatedDrawer == socket.id) {
-	    			return true;
-	    		}
-	    		return false;
-	    	}();
-	    	if (data.artist) {
-	    		randomWord = WORDS[Math.floor(Math.random() * WORDS.length)];
-	    		data.word = randomWord;
-	    	}
+            if (designatedDrawer == socket.id) {
+                data.artist = true;
+                randomWord = WORDS[Math.floor(Math.random() * WORDS.length)];
+                data.word = randomWord;
+            } else {
+                data.artist = false;
+            }
 	    	return data;
 	    }());
 	};
+
+    function drawWholePic() {
+        for (var i = 0; i < picture.length; i++) {
+            io.sockets.emit('draw', picture[i]);
+        }
+    }
+
+    function draw(position) {
+        if (vailidateDrawer()) {
+            socket.broadcast.emit('draw', position);
+            picture.push(position);
+        }
+    }
+
+    function vailidateDrawer() {
+        if (designatedDrawer == socket.id) {
+            return true;
+        }
+        return false;
+    }
+
+    function vaildateGuess(guess) {
+        if (!vailidateDrawer()) {
+            lastguess = guess;
+            socket.broadcast.emit('guess', guess);
+            if (guess == randomWord){
+                designatedDrawer = socket.id;
+                socket.emit('artist', {artist: true, word: randomWord});
+                newDesignatedDrawer();
+            } 
+        }
+    }
+
+    function newDesignatedDrawer() {
+        var keys = Object.keys(clients);
+        keys = shuffle(keys);
+        for (var i = 0; i < keys.length; i++) {
+            gameRoleRequest(clients[keys[i]]);
+        }
+        picture = [];
+        io.sockets.emit('clearCanvas');
+    }
 
     function shuffle(array) {
         var currentIndex = array.length, temporaryValue, randomIndex;
@@ -76,50 +106,35 @@ io.on('connection', function (socket) {
         return array;
     }
 
-    function drawWholePic() {
-        io.sockets.emit('clearCanvas');
-        for (var i = 0; i < picture.length; i++) {
-            io.sockets.emit('draw', picture[i]);
+    function clearCanvas() {
+        if (vailidateDrawer()) {
+            picture = [];
+            io.sockets.emit('clearCanvas');
         }
     }
 
-    socket.on('disconnect', function() {
+    function disconnectUser() {
         console.log('A user has disconnected');
         delete clients[socket.id];
 
         if (designatedDrawer == socket.id) {
-        	console.log('artist disconnected');
+            console.log('artist disconnected');
             designatedDrawer = '';
-            newRandomArtist();
+            newDesignatedDrawer();
         }
-    });
+    }
 
-    socket.on('draw', function(position) {
-    	if (designatedDrawer == socket.id) {
-    		socket.broadcast.emit('draw', position);
-            picture.push(position);
-    	}
-    });
+    socket.on('draw', draw);
 
-    socket.on('guess', function(guess) {
-        lastguess = guess;
-    	socket.broadcast.emit('guess', guess);
-    	if (guess == randomWord){
-            designatedDrawer = socket.id;
-    		socket.emit('artist', {artist: true, word: randomWord});
-            newRandomArtist();
-    	}
-    });
+    socket.on('guess', vaildateGuess);
 
-    socket.on('clearCanvas', function() {
-        if (designatedDrawer == socket.id) {
-            picture = [];
-            drawWholePic();
-        }
-    });
+    socket.on('clearCanvas', clearCanvas);
 
+    socket.on('disconnect', disconnectUser);
+
+
+    gameRoleRequest(socket);
     socket.emit('guess', lastguess);
-    artist(socket);
     drawWholePic();
 
 });
