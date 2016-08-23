@@ -34,6 +34,16 @@ canvas {
     display: block;
     margin: 0 auto;
 }
+
+#canvas-buttons {
+    margin: 0 auto;
+    width: 40%
+}
+
+#canvas-button-clear {
+    width: 100%;
+}
+
 </style>
 
 <!-- JS -->
@@ -48,7 +58,7 @@ canvas {
         <div id="guess" style="display: none">
             Make a guess: <input type="text">
         </div>
-        <div id="artist">
+        <div class="artist">
             <p>Your are the Artist! Draw this: <span id="artist-word"></span></p>
         </div>
         <div>
@@ -56,4 +66,8 @@ canvas {
         </div>
     </div>
     <canvas id="canvas"></canvas>
+    <div id="canvas-buttons" class="artist">
+        <button id="canvas-button-clear">Clear</button>
+    </div>
+    
 </div>

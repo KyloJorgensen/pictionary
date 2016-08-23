@@ -87,7 +87,6 @@ io.on('connection', function (socket) {
         console.log('A user has disconnected');
         delete clients[socket.id];
 
-        console.log(designatedDrawer, socket.id);
         if (designatedDrawer == socket.id) {
         	console.log('artist disconnected');
             designatedDrawer = '';
@@ -110,8 +109,14 @@ io.on('connection', function (socket) {
     		socket.emit('artist', {artist: true, word: randomWord});
             newRandomArtist();
     	}
-    }); 
+    });
 
+    socket.on('clearCanvas', function() {
+        if (designatedDrawer == socket.id) {
+            picture = [];
+            drawWholePic();
+        }
+    });
 
     socket.emit('guess', lastguess);
     artist(socket);

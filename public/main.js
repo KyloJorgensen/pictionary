@@ -5,11 +5,11 @@ var pictionary = function(socket) {
         drawer = data.artist;
         if (drawer) {
             $('#guess').hide();
-            $('#artist').show();
+            $('.artist').show();
             $('#artist-word').html(data.word);
         } else {
             $('#guess').show();
-            $('#artist').hide();
+            $('.artist').hide();
         }
     });
 
@@ -69,6 +69,10 @@ var pictionary = function(socket) {
     socket.on('guess', addGuess);
 
     socket.emit('artist');
+
+    $('.artist').on('click', '#canvas-button-clear', function() {
+        socket.emit('clearCanvas');
+    });
 };
 
 $(document).ready(function() {
