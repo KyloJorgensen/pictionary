@@ -14,6 +14,8 @@ var server = http.Server(app);
 var io = socket_io(server);
 
 var clients = {};
+var designatedDrawer = {user: ''};
+
 var artist = true;
 var randomWord = 'default';
 
@@ -23,6 +25,13 @@ io.on('connection', function (socket) {
 
     clients[socket.id] = socket;
 
+    if (designatedDrawer.user) {
+    	console.log('here');
+    } else {
+    	console.log('there');
+    	designatedDrawer.user = socket;
+    }
+
     console.log(Object.keys(clients));
 
     socket.on('go', function() {
@@ -31,62 +40,48 @@ io.on('connection', function (socket) {
 
     socket.emit('show');
 
-    socket.emit('artist', function() {
-    	var data = {};
-    	data.artist = artist;
-    	if (data.artist) {
-    		generateRandomWord();
-    		data.word = randomWord;
-    	} 
-    	artist = false;
-    	return data;
-    }());
+    function artist(socket) {
+	    socket.emit('artist', function() {
+	    	var data = {};
+	    	data.artist = function() {
+	    		if (designatedDrawer.user == socket) {
+	    			return true;
+	    		}
+	    		return false;
+	    	}();
+	    	if (data.artist) {
+	    		generateRandomWord();
+	    		data.word = randomWord;
+	    	}
+	    	return data;
+	    }());
+	};
+
+	artist(socket);
 
     function generateRandomWord() {
     	randomWord = WORDS[Math.floor(Math.random() * WORDS.length)];
     }
 
     socket.on('newgame', function() {
-	    socket.emit('artist', function() {
-	    	var data = {};
-	    	data.artist = artist;
-	    	if (data.artist) {
-	    		generateRandomWord();
-	    		data.word = randomWord;
-	    	} 
-	    	artist = false;
-	    	return data;
-	    }());
+		designatedDrawer.user = '';
+	    artist(socket);
+	    console.log('this1', socket.id);
     });
 
     socket.on('disconnect', function() {
         console.log('A user has disconnected');
-        socket.broadcast.emit('connections', '');
         delete clients[socket.id];
-    });
-
-    socket.on('connections', function(drawer) {
-		var newArtist = true,
-			artistConnected = false;  
-
-    	if (newArtist) {
-    		setTimeout(function() {
-    			if (!artistConnected) {
-    				artist = true;
-	    			io.sockets.emit('newgame', 'Artist left');
-	    		}
-    		}, 1000);
-    		newArtist = false;
-    	}
-
-    	if (drawer) {
-    		artistConnected = true;
-    	}
-
+        if (designatedDrawer.user = socket) {
+        	console.log('user: ', socket.id);
+        	socket.broadcast.emit('newgame', 'Artist left');
+        }
     });
 
     socket.on('draw', function(position) {
-        socket.broadcast.emit('draw', position);
+    	if (designatedDrawer.user == socket) {
+    		socket.broadcast.emit('draw', position);
+    	}
     });
 
     socket.on('guess', function(guess) {
